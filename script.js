@@ -13,3 +13,16 @@ for(let i = 0; i < height/sideLengthOfSquare; i++) {
     ctx.fillRect(i * sideLengthOfSquare, j * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
   }
 }
+
+function drawBoard() {
+	// Will draw board
+}
+
+class Checker {
+  constructor(color, i, j) {
+  	this.color = color;
+    this.i = i;
+    this.j = j;
+    this.isKing = false;
+  }
+}
