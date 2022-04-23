@@ -28,6 +28,10 @@ let EligbleMove2 = [-1, -1];
 let EligbleMove3 = [-1, -1]; // If checker is King
 let EligbleMove4 = [-1, -1]; // If checker is King
 
+let redsTurn = true;
+let potentialKillCoords = []; // Double digit form
+let potentialCasualty   = [];
+
 function initializeConfiguaration() {
   drawBoard();
   for(let i = 0; i < 3; i++) {
@@ -93,23 +97,26 @@ c0.addEventListener('mousedown', function(e) {
     const x    = Math.floor((e.clientX - rect.left) / sideLengthOfSquare);
     const y    = Math.floor((e.clientY - rect.top)  / sideLengthOfSquare);
     // Change color and design
-    if(board[y][x] != null && board[y][x].colorBoolean == true) { // Can check color of coordinate because JS first eval:s the first condition
+    if(redsTurn && (board[y][x] != null && board[y][x].colorBoolean == true)) { // Can check color of coordinate because JS first eval:s the first condition
       if(x == lastClickedX && y == lastClickedY) {
         drawChecker(board[y][x]);
         lastClickedX = -1;
         lastClickedY = -1;
         if(0 <= y - 1) setResetHighLight(x, y, "Tan", false);
+        if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
         //EligbleMove1 = [-1, -1];
         //EligbleMove2 = [-1, -1];
       } else {
         if(lastClickedY != -1) {
           drawChecker(board[lastClickedY][lastClickedX]);
           if(0 <= lastClickedY - 1) setResetHighLight(lastClickedX, lastClickedY, "Tan", false);
+          if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
         }
         selectedChecker(x, y);
         //EligbleMove1 = [-1, -1];
         //EligbleMove2 = [-1, -1];
         if(0 <= y - 1) setResetHighLight(x, y, "#9fd38d", true);
+        if(0 <= y - 2) potentialKill(x, y);
         lastClickedX = x;
         lastClickedY = y;
       }
@@ -117,7 +124,7 @@ c0.addEventListener('mousedown', function(e) {
     }
 
     // Move checker piece uppwards
-    if((EligbleMove1[0] == x && EligbleMove1[1] == y) || (EligbleMove2[0] == x && EligbleMove2[1] == y)) {
+    if(redsTurn && ((EligbleMove1[0] == x && EligbleMove1[1] == y) || (EligbleMove2[0] == x && EligbleMove2[1] == y))) {
       drawEmptyTile(lastClickedX, lastClickedY);
       setResetHighLight(lastClickedX, lastClickedY, "Tan", false);
 
@@ -127,21 +134,154 @@ c0.addEventListener('mousedown', function(e) {
       board[lastClickedY][lastClickedX] = null;
       lastClickedX = -1;
       lastClickedY = -1;
+      if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
+      drawChecker(board[y][x]);
+      redsTurn = false;
+      return;
+    }
+
+    // Change color and design for BLACK CHECKER
+    if(!redsTurn && (board[y][x] != null && board[y][x].colorBoolean == false)) { // Can check color of coordinate because JS first eval:s the first condition
+      console.log(2);
+      if(x == lastClickedX && y == lastClickedY) {
+        drawChecker(board[y][x]);
+        lastClickedX = -1;
+        lastClickedY = -1;
+        if(y + 1 < 8) setResetHighLightForBlack(x, y, "Tan", false);
+        if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
+        //EligbleMove1 = [-1, -1];
+        //EligbleMove2 = [-1, -1];
+      } else {
+        if(lastClickedY != -1) {
+          drawChecker(board[lastClickedY][lastClickedX]);
+          if(lastClickedY + 1 < 8) setResetHighLightForBlack(lastClickedX, lastClickedY, "Tan", false);
+          if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
+        }
+        selectedChecker(x, y);
+        //EligbleMove1 = [-1, -1];
+        //EligbleMove2 = [-1, -1];
+        if(y + 1 < 8) setResetHighLightForBlack(x, y, "#9fd38d", true);
+        if(y + 2 < 8) potentialKillForBlack(x, y);
+        lastClickedX = x;
+        lastClickedY = y;
+      }
+      //console.log("x: " + x + " y: " + y);
+    }
+    if(!redsTurn && ((EligbleMove1[0] == x && EligbleMove1[1] == y) || (EligbleMove2[0] == x && EligbleMove2[1] == y))) {
+      drawEmptyTile(lastClickedX, lastClickedY);
+      setResetHighLightForBlack(lastClickedX, lastClickedY, "Tan", false);
+
+      board[y][x]   = board[lastClickedY][lastClickedX];
+      board[y][x].i = x;
+      board[y][x].j = y;
+      board[lastClickedY][lastClickedX] = null;
+      lastClickedX = -1;
+      lastClickedY = -1;
+      if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
+      drawChecker(board[y][x]);
+      redsTurn = true;
+      return;
+    }
+
+    if(potentialKillCoords.includes((x * 10) + y)) {
+      eliminateChecker(x, y, potentialKillCoords);
+      drawEmptyTile(lastClickedX, lastClickedY);
+      potentialKillCoords = [];
+
+      if(redsTurn) setResetHighLight(lastClickedX, lastClickedY);
+      else setResetHighLightForBlack(lastClickedX, lastClickedY);
+
+      board[y][x]   = board[lastClickedY][lastClickedX];
+      board[y][x].i = x;
+      board[y][x].j = y;
+      board[lastClickedY][lastClickedX] = null;
+      lastClickedX = -1;
+      lastClickedY = -1;
 
       drawChecker(board[y][x]);
-
+      redsTurn = !redsTurn;
+      console.log("-><-");
+      return;
     }
 });
 
 function setResetHighLight(x, y, color, IsGoingToRecordMove) {
   ctx.fillStyle = color;
+  // Going Upwards
   if(0 <= x - 1 && board[y - 1][x - 1] == null) {
     ctx.fillRect((x - 1) * sideLengthOfSquare, (y - 1) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
     EligbleMove1 = [IsGoingToRecordMove ? x - 1 : -1, IsGoingToRecordMove ? y - 1 : -1];
   }
+
   if(8 >  x + 1 && board[y - 1][x + 1] == null) {
     ctx.fillRect((x + 1) * sideLengthOfSquare, (y - 1) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
     EligbleMove2 = [IsGoingToRecordMove ? x + 1 : -1, IsGoingToRecordMove ? y - 1 : -1];
+  }
+}
+
+function setResetHighLightForBlack(x, y, color, IsGoingToRecordMove) {
+  ctx.fillStyle = color;
+  // Going downwards
+  if(0 <= x - 1 && board[y + 1][x - 1] == null) {
+    ctx.fillRect((x - 1) * sideLengthOfSquare, (y + 1) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+    EligbleMove1 = [IsGoingToRecordMove ? x - 1 : -1, IsGoingToRecordMove ? y + 1 : -1];
+  }
+  if(8 >  x + 1 && board[y + 1][x + 1] == null) {
+    ctx.fillRect((x + 1) * sideLengthOfSquare, (y + 1) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+    EligbleMove2 = [IsGoingToRecordMove ? x + 1 : -1, IsGoingToRecordMove ? y + 1 : -1];
+  }
+
+}
+
+function potentialKill(x, y) {
+  // Upper left kill
+  if(0 <= x - 2 && board[y - 1][x - 1] != null && board[y - 1][x - 1].colorBoolean == false && board[y - 2][x - 2] == null) {
+    ctx.fillStyle = "#d38d8d";
+    ctx.fillRect((x - 2) * sideLengthOfSquare, (y - 2) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+    potentialKillCoords.push(10 * (x - 2) + (y - 2));
+    potentialCasualty.push(board[y - 1][x - 1]);
+  }
+  // Upper right kill
+  if(0 <= x + 2 && board[y - 1][x + 1] != null && board[y - 1][x + 1].colorBoolean == false && board[y - 2][x + 2] == null) {
+    ctx.fillStyle = "#d38d8d";
+    ctx.fillRect((x + 2) * sideLengthOfSquare, (y - 2) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+    potentialKillCoords.push(10 * (x + 2) + (y - 2));
+    potentialCasualty.push(board[y - 1][x + 1]);
+  }
+}
+
+function potentialKillForBlack(x, y) {
+  // Lower left kill
+  if(0 <= x - 2 && board[y + 1][x - 1] != null && board[y + 1][x - 1].colorBoolean == true && board[y + 2][x - 2] == null) {
+    ctx.fillStyle = "#d38d8d";
+    ctx.fillRect((x - 2) * sideLengthOfSquare, (y + 2) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+    potentialKillCoords.push(10 * (x - 2) + (y + 2));
+    potentialCasualty.push(board[y + 1][x - 1]);
+  }
+  // Lower right kill
+  if(0 <= x + 2 && board[y + 1][x + 1] != null && board[y + 1][x + 1].colorBoolean == true && board[y + 2][x + 2] == null) {
+    ctx.fillStyle = "#d38d8d";
+    ctx.fillRect((x + 2) * sideLengthOfSquare, (y + 2) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+    potentialKillCoords.push(10 * (x + 2) + (y + 2));
+    potentialCasualty.push(board[y + 1][x + 1]);
+  }
+}
+
+function resetPotentialKillMarkerAndCasualty(arr) {
+  for(let i = 0; i < arr.length; i++) {
+    drawEmptyTile(Math.floor(arr[i] / 10), arr[i] % 10);
+  }
+  potentialCasualty = [];
+  return [];
+}
+
+function eliminateChecker(x, y, arr) {
+  let indx = arr.indexOf((x * 10) + y);
+  if(indx != -1) {
+    let recentlyEliminatedChecker = potentialCasualty[indx];
+    board[recentlyEliminatedChecker.j][recentlyEliminatedChecker.i] = null;
+    resetPotentialKillMarkerAndCasualty(arr);
+    drawEmptyTile(recentlyEliminatedChecker.i, recentlyEliminatedChecker.j);
   }
 }
 
