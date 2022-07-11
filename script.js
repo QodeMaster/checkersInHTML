@@ -1,6 +1,9 @@
 const c0  = document.getElementById("can0");
 const ctx = c0.getContext("2d");
 
+let crown = new Image();
+crown.src = "crown.png"; // Crown icon
+
 /* Canvas specs */
 const width  = c0.width;
 const height = c0.height;
@@ -27,6 +30,7 @@ let EligbleMove1 = [-1, -1];
 let EligbleMove2 = [-1, -1];
 let EligbleMove3 = [-1, -1]; // If checker is King
 let EligbleMove4 = [-1, -1]; // If checker is King
+let killStreakOn = false;
 
 let redsTurn = true;
 let potentialKillCoords = []; // Double digit form
@@ -97,7 +101,7 @@ c0.addEventListener('mousedown', function(e) {
     const x    = Math.floor((e.clientX - rect.left) / sideLengthOfSquare);
     const y    = Math.floor((e.clientY - rect.top)  / sideLengthOfSquare);
     // Change color and design
-    if(redsTurn && (board[y][x] != null && board[y][x].colorBoolean == true)) { // Can check color of coordinate because JS first eval:s the first condition
+    if(!killStreakOn && redsTurn && (board[y][x] != null && board[y][x].colorBoolean == true)) { // Can check color of coordinate because JS first eval:s the first condition
       if(x == lastClickedX && y == lastClickedY) {
         drawChecker(board[y][x]);
         lastClickedX = -1;
@@ -106,7 +110,7 @@ c0.addEventListener('mousedown', function(e) {
         if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
         //EligbleMove1 = [-1, -1];
         //EligbleMove2 = [-1, -1];
-      } else {
+      } else if(!killStreakOn) {
         if(lastClickedY != -1) {
           drawChecker(board[lastClickedY][lastClickedX]);
           if(0 <= lastClickedY - 1) setResetHighLight(lastClickedX, lastClickedY, "Tan", false);
@@ -116,7 +120,7 @@ c0.addEventListener('mousedown', function(e) {
         //EligbleMove1 = [-1, -1];
         //EligbleMove2 = [-1, -1];
         if(0 <= y - 1) setResetHighLight(x, y, "#9fd38d", true);
-        if(0 <= y - 2) potentialKill(x, y);
+        if(0 <= y - 2) potentialKill(x, y, 1, false);
         lastClickedX = x;
         lastClickedY = y;
       }
@@ -124,7 +128,7 @@ c0.addEventListener('mousedown', function(e) {
     }
 
     // Move checker piece uppwards
-    if(redsTurn && ((EligbleMove1[0] == x && EligbleMove1[1] == y) || (EligbleMove2[0] == x && EligbleMove2[1] == y))) {
+    if(!killStreakOn && redsTurn && ((EligbleMove1[0] == x && EligbleMove1[1] == y) || (EligbleMove2[0] == x && EligbleMove2[1] == y))) {
       drawEmptyTile(lastClickedX, lastClickedY);
       setResetHighLight(lastClickedX, lastClickedY, "Tan", false);
 
@@ -137,11 +141,17 @@ c0.addEventListener('mousedown', function(e) {
       if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
       drawChecker(board[y][x]);
       redsTurn = false;
+
+      if(y == 0 || y == 8) {
+        board[y][x].isKing = true;
+        ctx.drawImage(crown, halfWaySideLengthOfSquare + x * sideLengthOfSquare - 15, halfWaySideLengthOfSquare + y * sideLengthOfSquare - 15, 30, 30);
+        console.log("Draw crown");
+      }
       return;
     }
 
     // Change color and design for BLACK CHECKER
-    if(!redsTurn && (board[y][x] != null && board[y][x].colorBoolean == false)) { // Can check color of coordinate because JS first eval:s the first condition
+    if(!killStreakOn && !redsTurn && (board[y][x] != null && board[y][x].colorBoolean == false)) { // Can check color of coordinate because JS first eval:s the first condition
       console.log(2);
       if(x == lastClickedX && y == lastClickedY) {
         drawChecker(board[y][x]);
@@ -161,13 +171,13 @@ c0.addEventListener('mousedown', function(e) {
         //EligbleMove1 = [-1, -1];
         //EligbleMove2 = [-1, -1];
         if(y + 1 < 8) setResetHighLightForBlack(x, y, "#9fd38d", true);
-        if(y + 2 < 8) potentialKillForBlack(x, y);
+        if(y + 2 < 8) potentialKill(x, y, -1, false);
         lastClickedX = x;
         lastClickedY = y;
       }
       //console.log("x: " + x + " y: " + y);
     }
-    if(!redsTurn && ((EligbleMove1[0] == x && EligbleMove1[1] == y) || (EligbleMove2[0] == x && EligbleMove2[1] == y))) {
+    if(!killStreakOn && !redsTurn && ((EligbleMove1[0] == x && EligbleMove1[1] == y) || (EligbleMove2[0] == x && EligbleMove2[1] == y))) {
       drawEmptyTile(lastClickedX, lastClickedY);
       setResetHighLightForBlack(lastClickedX, lastClickedY, "Tan", false);
 
@@ -199,9 +209,18 @@ c0.addEventListener('mousedown', function(e) {
       lastClickedY = -1;
 
       drawChecker(board[y][x]);
-      redsTurn = !redsTurn;
+      checkForMultiKill(x, y, (redsTurn ? 1 : -1), false);
+      if(killStreakOn) {
+        lastClickedX = x;
+        lastClickedY = y;
+      }
+      redsTurn = (killStreakOn ? redsTurn : !redsTurn);
       console.log("-><-");
-      return;
+      if(y == 0 || y == 8) {
+        board[y][x].isKing = true;
+        ctx.drawImage(crown, halfWaySideLengthOfSquare + x * sideLengthOfSquare - 15, halfWaySideLengthOfSquare + y * sideLengthOfSquare - 15, 30, 30);
+        console.log("Draw crown");
+      }
     }
 });
 
@@ -233,20 +252,21 @@ function setResetHighLightForBlack(x, y, color, IsGoingToRecordMove) {
 
 }
 
-function potentialKill(x, y) {
-  // Upper left kill
-  if(0 <= x - 2 && board[y - 1][x - 1] != null && board[y - 1][x - 1].colorBoolean == false && board[y - 2][x - 2] == null) {
+function potentialKill(x, y, dy, isKing) {
+  if(0 <= x - 2 && 0 <= y - 2 * dy && y - 2 * dy < 8 && board[y - 1 * dy][x - 1] != null && board[y - 1 * dy][x - 1].colorBoolean == (dy == -1) && board[y - 2 * dy][x - 2] == null) {
     ctx.fillStyle = "#d38d8d";
-    ctx.fillRect((x - 2) * sideLengthOfSquare, (y - 2) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-    potentialKillCoords.push(10 * (x - 2) + (y - 2));
-    potentialCasualty.push(board[y - 1][x - 1]);
+    ctx.fillRect((x - 2) * sideLengthOfSquare, (y - 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+    potentialKillCoords.push(10 * (x - 2) + (y - 2 * dy));
+    potentialCasualty.push(board[y - 1 * dy][x - 1]);
+    killStreakOn = true;
   }
   // Upper right kill
-  if(0 <= x + 2 && board[y - 1][x + 1] != null && board[y - 1][x + 1].colorBoolean == false && board[y - 2][x + 2] == null) {
+  if(0 <= x + 2 && 0 <= y - 2 * dy && y - 2 * dy < 8 && board[y - 1 * dy][x + 1] != null && board[y - 1 * dy][x + 1].colorBoolean == (dy == -1) && board[y - 2 * dy][x + 2] == null) {
     ctx.fillStyle = "#d38d8d";
-    ctx.fillRect((x + 2) * sideLengthOfSquare, (y - 2) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-    potentialKillCoords.push(10 * (x + 2) + (y - 2));
-    potentialCasualty.push(board[y - 1][x + 1]);
+    ctx.fillRect((x + 2) * sideLengthOfSquare, (y - 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+    potentialKillCoords.push(10 * (x + 2) + (y - 2 * dy));
+    potentialCasualty.push(board[y - 1 * dy][x + 1]);
+    killStreakOn = true;
   }
 }
 
@@ -285,7 +305,29 @@ function eliminateChecker(x, y, arr) {
   }
 }
 
+function checkForMultiKill(x, y, dy, isKing) {
+  killStreakOn = false;
+  if(0 <= x - 2 && 0 <= y - 2 * dy && y - 2 * dy < 8 && board[y - 1 * dy][x - 1] != null && board[y - 1 * dy][x - 1].colorBoolean == (dy == -1) && board[y - 2 * dy][x - 2] == null) {
+    ctx.fillStyle = "#d38d8d";
+    ctx.fillRect((x - 2) * sideLengthOfSquare, (y - 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+    potentialKillCoords.push(10 * (x - 2) + (y - 2 * dy));
+    potentialCasualty.push(board[y - 1 * dy][x - 1]);
+    killStreakOn = true;
+  }
+  if(0 <= x + 2 && 0 <= y - 2 * dy && y - 2 * dy < 8 && board[y - 1 * dy][x + 1] != null && board[y - 1 * dy][x + 1].colorBoolean == (dy == -1) && board[y - 2 * dy][x + 2] == null) {
+    ctx.fillStyle = "#d38d8d";
+    ctx.fillRect((x + 2) * sideLengthOfSquare, (y - 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+    potentialKillCoords.push(10 * (x + 2) + (y - 2 * dy));
+    potentialCasualty.push(board[y - 1 * dy][x + 1]);
+    killStreakOn = true;
+  }
+  console.log("makhmadim");
+}
+
 function drawEmptyTile(x, y) {
   ctx.fillStyle = "Tan";
   ctx.fillRect(x * sideLengthOfSquare, y * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
 }
+
+// Fix: King icon shouldn't be painted over
+//      Something wrong with black checker when reaching kings row, killStreakOn should be false 
