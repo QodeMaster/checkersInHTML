@@ -26,15 +26,15 @@ const checkerRadius             = 20;
 /* User info */
 let lastClickedX = -1;
 let lastClickedY = -1;
-let EligbleMove1 = [-1, -1];
-let EligbleMove2 = [-1, -1];
-let EligbleMove3 = [-1, -1]; // If checker is King
-let EligbleMove4 = [-1, -1]; // If checker is King
+let EligbleMoves = [[-1, -1], [-1, -1], [-1, -1], [-1, -1]]; // x:y coordinates of each of the four directions
 let killStreakOn = false;
 
 let redsTurn = true;
 let potentialKillCoords = []; // Double digit form
 let potentialCasualty   = [];
+
+let reds   = [];
+let blacks = [];
 
 function initializeConfiguaration() {
   drawBoard();
@@ -43,6 +43,7 @@ function initializeConfiguaration() {
       let checker = new Checker(j, i, false); // Black Checker
       board[i][j] = checker;
       drawChecker(checker);
+      //blacks.push(checker);
     }
   }
   for(let i = 5; i < 8; i++) {
@@ -50,8 +51,22 @@ function initializeConfiguaration() {
       let checker = new Checker(j, i, true); // Red Checker
       board[i][j] = checker;
       drawChecker(checker);
+      //reds.push(checker);
     }
   }
+}
+
+function countScore() {
+  let count = 0;
+
+  for(let row of board) {
+    for(let tile of row) {
+      if(tile != null && tile.colorBoolean) {
+        count++;
+      }
+    }
+  }
+  return count;
 }
 
 function drawBoard() {
@@ -99,154 +114,127 @@ class Checker {
 initializeConfiguaration();
 
 c0.addEventListener('mousedown', function(e) {
-    const rect = c0.getBoundingClientRect();
-    const x    = Math.floor((e.clientX - rect.left) / sideLengthOfSquare);
-    const y    = Math.floor((e.clientY - rect.top)  / sideLengthOfSquare);
-    // Change color and design
-
-    // Double click and single click for own checker piece for Red&Black
-    if(!killStreakOn && (board[y][x] != null && board[y][x].colorBoolean == redsTurn)) {
-      if(x == lastClickedX && y == lastClickedY) {
-        drawChecker(board[y][x]);
-        lastClickedX = -1;
-        lastClickedY = -1;
-        setResetHighLight(x, y, "Tan", false, redsTurn ? 1 : -1);
-        if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
-        //EligbleMove1 = [-1, -1];
-        //EligbleMove2 = [-1, -1];
-      } else if(!killStreakOn) {
-        if(lastClickedY != -1) {
-          drawChecker(board[lastClickedY][lastClickedX]);
-          setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1);
-          if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
-        }
-        selectedChecker(x, y);
-        //EligbleMove1 = [-1, -1];
-        //EligbleMove2 = [-1, -1];
-        setResetHighLight(x, y, "#9fd38d", true, redsTurn ? 1 : -1);
-        potentialKill(x, y, redsTurn ? 1 : -1, board[y][x].isKing, false);
-        lastClickedX = x;
-        lastClickedY = y;
-      }
-    }
-
-    // Move checker piece for Red&Black
-    if(!killStreakOn 
-      &&((EligbleMove1[0] == x && EligbleMove1[1] == y) 
-      || (EligbleMove2[0] == x && EligbleMove2[1] == y)
-      || (EligbleMove3[0] == x && EligbleMove3[1] == y)
-      || (EligbleMove4[0] == x && EligbleMove4[1] == y))) {
-      drawEmptyTile(lastClickedX, lastClickedY);
-      setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1);
-
-      board[y][x]   = board[lastClickedY][lastClickedX];
-      board[y][x].i = x;
-      board[y][x].j = y;
-      board[lastClickedY][lastClickedX] = null;
-      lastClickedX = -1;
-      lastClickedY = -1;
-      if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
-      drawChecker(board[y][x]);
-      redsTurn = !redsTurn;
-
-      if(!board[y][x].isKing && (y == 0 || y == 7)) {
-        board[y][x].isKing = true;
-        ctx.drawImage(crown, halfWaySideLengthOfSquare + x * sideLengthOfSquare - 15, halfWaySideLengthOfSquare + y * sideLengthOfSquare - 15, 30, 30);
-        console.log("Draw crown");
-      }
-      return;
-    }
-
-    if(potentialKillCoords.includes((x * 10) + y)) {
-      eliminateChecker(x, y, potentialKillCoords);
-      drawEmptyTile(lastClickedX, lastClickedY);
-      potentialKillCoords = [];
-
-      setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1);
-
-      board[y][x]   = board[lastClickedY][lastClickedX];
-      board[y][x].i = x;
-      board[y][x].j = y;
-      board[lastClickedY][lastClickedX] = null;
-      lastClickedX = -1;
-      lastClickedY = -1;
-
-      drawChecker(board[y][x]);
-      potentialKill(x, y, (redsTurn ? 1 : -1), board[y][x].isKing, true);
-      if(killStreakOn) {
-        lastClickedX = x;
-        lastClickedY = y;
-      }
-      redsTurn = (killStreakOn ? redsTurn : !redsTurn);
-      console.log("-><-");
-      if(!board[y][x].isKing && (y == 0 || y == 7)) {
-        board[y][x].isKing = true;
-        ctx.drawImage(crown, halfWaySideLengthOfSquare + x * sideLengthOfSquare - 15, halfWaySideLengthOfSquare + y * sideLengthOfSquare - 15, 30, 30);
-        console.log("Draw crown");
-      }
-    }
+  const rect = c0.getBoundingClientRect();
+  const x    = Math.floor((e.clientX - rect.left) / sideLengthOfSquare);
+  const y    = Math.floor((e.clientY - rect.top)  / sideLengthOfSquare);
+  // Change color and design
+  actHandler(x, y);
 });
 
-function setResetHighLight(x, y, color, IsGoingToRecordMove, dy) {
-  ctx.fillStyle = color;
-  // Going Upwards
-  console.log(y - 1 * dy);
-  if(0 <= y - 1 * dy && y - 1 * dy < 8) {
-
-    if(0 <= x - 1 && board[y - 1 * dy][x - 1] == null) {
-      ctx.fillRect((x - 1) * sideLengthOfSquare, (y - 1 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-      EligbleMove1 = [IsGoingToRecordMove ? x - 1 : -1, IsGoingToRecordMove ? y - 1 * dy : -1];
+function actHandler(x, y) {
+  // Double click and single click for own checker piece for Red&Black to highlight all non-aggresive possible moves
+  if(!killStreakOn && (board[y][x] != null && board[y][x].colorBoolean == redsTurn)) {
+    if(x == lastClickedX && y == lastClickedY) {
+      drawChecker(board[y][x]);
+      lastClickedX = -1;
+      lastClickedY = -1;
+      setResetHighLight(x, y, "Tan", false, redsTurn ? 1 : -1);
+      if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
+    } else if(!killStreakOn) {
+      if(lastClickedY != -1) {
+        drawChecker(board[lastClickedY][lastClickedX]);
+        setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1);
+        if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
+      }
+      selectedChecker(x, y);
+      setResetHighLight(x, y, "#9fd38d", true, redsTurn ? 1 : -1);
+      potentialKill(x, y, redsTurn ? 1 : -1, board[y][x].isKing, false);
+      lastClickedX = x;
+      lastClickedY = y;
     }
+  }
 
-    if(8 >  x + 1 && board[y - 1 * dy][x + 1] == null) {
-      ctx.fillRect((x + 1) * sideLengthOfSquare, (y - 1 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-      EligbleMove2 = [IsGoingToRecordMove ? x + 1 : -1, IsGoingToRecordMove ? y - 1 * dy : -1];
+  // Move checker piece for Red&Black
+  if(!killStreakOn 
+    &&((EligbleMoves[0][0] == x && EligbleMoves[0][1] == y) 
+    || (EligbleMoves[1][0] == x && EligbleMoves[1][1] == y)
+    || (EligbleMoves[2][0] == x && EligbleMoves[2][1] == y)
+    || (EligbleMoves[3][0] == x && EligbleMoves[3][1] == y))) {
+    drawEmptyTile(lastClickedX, lastClickedY);
+    setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1);
+
+    board[y][x]   = board[lastClickedY][lastClickedX];
+    board[y][x].i = x;
+    board[y][x].j = y;
+    board[lastClickedY][lastClickedX] = null;
+    lastClickedX = -1;
+    lastClickedY = -1;
+    if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
+    drawChecker(board[y][x]);
+    redsTurn = !redsTurn;
+
+    if(!board[y][x].isKing && (y == 0 || y == 7)) {
+      board[y][x].isKing = true;
+      ctx.drawImage(crown, halfWaySideLengthOfSquare + x * sideLengthOfSquare - 15, halfWaySideLengthOfSquare + y * sideLengthOfSquare - 15, 30, 30);
+      console.log("Draw crown");
     }
-  } 
+    return;
+  }
 
-  if(board[y][x].isKing && (0 <= y + 1 * dy && y + 1 * dy < 8)) { // Kings can move forwards and backwards
-    console.log("backwards");
-    if(0 <= x - 1 && board[y + 1 * dy][x - 1] == null) {
-      ctx.fillRect((x - 1) * sideLengthOfSquare, (y + 1 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-      EligbleMove3 = [IsGoingToRecordMove ? x - 1 : -1, IsGoingToRecordMove ? y + 1 * dy : -1];
+  if(potentialKillCoords.includes((x * 10) + y)) {
+    eliminateChecker(x, y, potentialKillCoords);
+    drawEmptyTile(lastClickedX, lastClickedY);
+    potentialKillCoords = [];
+
+    setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1);
+
+    board[y][x]   = board[lastClickedY][lastClickedX];
+    board[y][x].i = x;
+    board[y][x].j = y;
+    board[lastClickedY][lastClickedX] = null;
+    lastClickedX = -1;
+    lastClickedY = -1;
+
+    drawChecker(board[y][x]);
+    potentialKill(x, y, (redsTurn ? 1 : -1), board[y][x].isKing, true);
+    if(killStreakOn) {
+      lastClickedX = x;
+      lastClickedY = y;
     }
-
-    if(8 >  x + 1 && board[y + 1 * dy][x + 1] == null) {
-      ctx.fillRect((x + 1) * sideLengthOfSquare, (y + 1 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-      EligbleMove4 = [IsGoingToRecordMove ? x + 1 : -1, IsGoingToRecordMove ? y + 1 * dy : -1];
+    redsTurn = (killStreakOn ? redsTurn : !redsTurn);
+    if(!board[y][x].isKing && (y == 0 || y == 7)) {
+      board[y][x].isKing = true;
+      ctx.drawImage(crown, halfWaySideLengthOfSquare + x * sideLengthOfSquare - 15, halfWaySideLengthOfSquare + y * sideLengthOfSquare - 15, 30, 30);
+      console.log("Draw crown");
     }
   }
 }
 
-/*function potentialKill(x, y, dy, isKing) {
-  ctx.fillStyle = "#d38d8d";
-  if(0 <= x - 2 && 0 <= y - 2 * dy && y - 2 * dy < 8 && board[y - 1 * dy][x - 1] != null && board[y - 1 * dy][x - 1].colorBoolean == (dy == -1) && board[y - 2 * dy][x - 2] == null) {
-    
-    ctx.fillRect((x - 2) * sideLengthOfSquare, (y - 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-    potentialKillCoords.push(10 * (x - 2) + (y - 2 * dy));
-    potentialCasualty.push(board[y - 1 * dy][x - 1]);
-  }
-  // Upper right kill
-  if(x + 2 < 8 && 0 <= y - 2 * dy && y - 2 * dy < 8 && board[y - 1 * dy][x + 1] != null && board[y - 1 * dy][x + 1].colorBoolean == (dy == -1) && board[y - 2 * dy][x + 2] == null) {
-    ctx.fillRect((x + 2) * sideLengthOfSquare, (y - 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-    potentialKillCoords.push(10 * (x + 2) + (y - 2 * dy));
-    potentialCasualty.push(board[y - 1 * dy][x + 1]);
-  }
+///////////////////////////////////////////
+/*----------HEURISTIC FUNCTIONS----------*/
+///////////////////////////////////////////
 
-  if(isKing) {
-    if(0 <= x - 2 && 0 <= y + 2 * dy && y + 2 * dy < 8 && board[y + 1 * dy][x - 1] != null && board[y + 1 * dy][x - 1].colorBoolean == (dy == -1) && board[y + 2 * dy][x - 2] == null) {
-      ctx.fillRect((x - 2) * sideLengthOfSquare, (y + 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-      potentialKillCoords.push(10 * (x - 2) + (y + 2 * dy));
-      potentialCasualty.push(board[y + 1 * dy][x - 1]);
-    }
-    // Upper right kill
-    if(x + 2 < 8 && 0 <= y + 2 * dy && y + 2 * dy < 8 && board[y + 1 * dy][x + 1] != null && board[y + 1 * dy][x + 1].colorBoolean == (dy == -1) && board[y + 2 * dy][x + 2] == null) {
-      ctx.fillRect((x + 2) * sideLengthOfSquare, (y + 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-      potentialKillCoords.push(10 * (x + 2) + (y + 2 * dy));
-      potentialCasualty.push(board[y + 1 * dy][x + 1]);
+function heuristics() {}  // WORK HERE !!!
+// Heuristic without graphic to reduce lag
+
+function select(x, y) {
+  potentialKill(x, y, -1, board[y][x].isKing, false);
+  // Find a way to fill EligbleMoves array
+  lastClickedX = x;
+  lastClickedY = y;
+}
+
+///////////////////////////////////////////
+/*------END HEURISTIC FUNCTIONS----------*/
+///////////////////////////////////////////
+
+function setResetHighLight(x, y, color, IsGoingToRecordMove, dy) {
+  ctx.fillStyle = color;
+  // Going Upwards
+  let k = 0;
+  for(let i = -1; i <= 1; i+=2) {
+    if(0 <= x + i && x + i < 8) {
+      for(let j = -1; j <= (board[y][x].isKing ? 1 : 0); j+=2)  {
+        //console.log(`x:${x + i} y:${y + j * dy}`);
+        if(0 <= y + j * dy && y + j * dy < 8 && board[y + j * dy][x + i] == null) {
+          ctx.fillRect((x + i) * sideLengthOfSquare, (y + j * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+          EligbleMoves[k] = [IsGoingToRecordMove ? x + i : -1, IsGoingToRecordMove ? y + j * dy : -1];
+        }
+        k++;
+      }
     }
   }
-}*/
+}
 
 function potentialKill(x, y, dy, isKing, isCheckingForMultiKill) {
   ctx.fillStyle = "#d38d8d";
@@ -267,20 +255,6 @@ function potentialKill(x, y, dy, isKing, isCheckingForMultiKill) {
       }
     }
   }
-
-  /*if(isKing) {
-    if(0 <= x - 2 && 0 <= y + 2 * dy && y + 2 * dy < 8 && board[y + 1 * dy][x - 1] != null && board[y + 1 * dy][x - 1].colorBoolean == (dy == -1) && board[y + 2 * dy][x - 2] == null) {
-      ctx.fillRect((x - 2) * sideLengthOfSquare, (y + 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-      potentialKillCoords.push(10 * (x - 2) + (y + 2 * dy));
-      potentialCasualty.push(board[y + 1 * dy][x - 1]);
-    }
-    // Upper right kill
-    if(x + 2 < 8 && 0 <= y + 2 * dy && y + 2 * dy < 8 && board[y + 1 * dy][x + 1] != null && board[y + 1 * dy][x + 1].colorBoolean == (dy == -1) && board[y + 2 * dy][x + 2] == null) {
-      ctx.fillRect((x + 2) * sideLengthOfSquare, (y + 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-      potentialKillCoords.push(10 * (x + 2) + (y + 2 * dy));
-      potentialCasualty.push(board[y + 1 * dy][x + 1]);
-    }
-  }*/
 }
 
 function resetPotentialKillMarkerAndCasualty(arr) {
@@ -299,43 +273,6 @@ function eliminateChecker(x, y, arr) {
     resetPotentialKillMarkerAndCasualty(arr);
     drawEmptyTile(recentlyEliminatedChecker.i, recentlyEliminatedChecker.j);
   }
-}
-
-function checkForMultiKill(x, y, dy, isKing) {
-  killStreakOn = false;
-  ctx.fillStyle = "#d38d8d";
-  if(0 <= x - 2 && 0 <= y - 2 * dy && y - 2 * dy < 8 && board[y - 1 * dy][x - 1] != null && board[y - 1 * dy][x - 1].colorBoolean == (dy == -1) && board[y - 2 * dy][x - 2] == null) {
-    ctx.fillRect((x - 2) * sideLengthOfSquare, (y - 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-    potentialKillCoords.push(10 * (x - 2) + (y - 2 * dy));
-    potentialCasualty.push(board[y - 1 * dy][x - 1]);
-    killStreakOn = true;
-    console.log("x-");
-  }
-  if(x + 2 < 8 && 0 <= y - 2 * dy && y - 2 * dy < 8 && board[y - 1 * dy][x + 1] != null && board[y - 1 * dy][x + 1].colorBoolean == (dy == -1) && board[y - 2 * dy][x + 2] == null) {
-    ctx.fillRect((x + 2) * sideLengthOfSquare, (y - 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-    potentialKillCoords.push(10 * (x + 2) + (y - 2 * dy));
-    potentialCasualty.push(board[y - 1 * dy][x + 1]);
-    killStreakOn = true;
-    console.log("-x");
-  }
-
-  if(isKing) {
-    if(0 <= x - 2 && 0 <= y + 2 * dy && y + 2 * dy < 8 && board[y + 1 * dy][x - 1] != null && board[y + 1 * dy][x - 1].colorBoolean == (dy == -1) && board[y + 2 * dy][x - 2] == null) {
-      ctx.fillRect((x - 2) * sideLengthOfSquare, (y + 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-      potentialKillCoords.push(10 * (x - 2) + (y + 2 * dy));
-      potentialCasualty.push(board[y + 1 * dy][x - 1]);
-      killStreakOn = true;
-      console.log("x-");
-    }
-    if(x + 2 < 8 && 0 <= y + 2 * dy && y + 2 * dy < 8 && board[y + 1 * dy][x + 1] != null && board[y + 1 * dy][x + 1].colorBoolean == (dy == -1) && board[y + 2 * dy][x + 2] == null) {
-      ctx.fillRect((x + 2) * sideLengthOfSquare, (y + 2 * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-      potentialKillCoords.push(10 * (x + 2) + (y + 2 * dy));
-      potentialCasualty.push(board[y + 1 * dy][x + 1]);
-      killStreakOn = true;
-      console.log("-x");
-    }
-  }
-  console.log("makhmadim");
 }
 
 function drawEmptyTile(x, y) {
