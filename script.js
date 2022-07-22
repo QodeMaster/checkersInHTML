@@ -128,17 +128,17 @@ function actHandler(x, y) {
       drawChecker(board[y][x]);
       lastClickedX = -1;
       lastClickedY = -1;
-      setResetHighLight(x, y, "Tan", false, redsTurn ? 1 : -1);
+      setResetHighLight(x, y, "Tan", false, redsTurn ? 1 : -1, true);
       if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
     } else if(!killStreakOn) {
       if(lastClickedY != -1) {
         drawChecker(board[lastClickedY][lastClickedX]);
-        setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1);
+        setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1, true);
         if(potentialKillCoords.length != 0) potentialKillCoords = resetPotentialKillMarkerAndCasualty(potentialKillCoords);
       }
       selectedChecker(x, y);
-      setResetHighLight(x, y, "#9fd38d", true, redsTurn ? 1 : -1);
-      potentialKill(x, y, redsTurn ? 1 : -1, board[y][x].isKing, false);
+      setResetHighLight(x, y, "#9fd38d", true, redsTurn ? 1 : -1, true);
+      potentialKill(x, y, redsTurn ? 1 : -1, board[y][x].isKing, false, true);
       lastClickedX = x;
       lastClickedY = y;
     }
@@ -151,7 +151,7 @@ function actHandler(x, y) {
     || (EligbleMoves[2][0] == x && EligbleMoves[2][1] == y)
     || (EligbleMoves[3][0] == x && EligbleMoves[3][1] == y))) {
     drawEmptyTile(lastClickedX, lastClickedY);
-    setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1);
+    setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1, true);
 
     board[y][x]   = board[lastClickedY][lastClickedX];
     board[y][x].i = x;
@@ -176,7 +176,7 @@ function actHandler(x, y) {
     drawEmptyTile(lastClickedX, lastClickedY);
     potentialKillCoords = [];
 
-    setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1);
+    setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1, true);
 
     board[y][x]   = board[lastClickedY][lastClickedX];
     board[y][x].i = x;
@@ -186,7 +186,7 @@ function actHandler(x, y) {
     lastClickedY = -1;
 
     drawChecker(board[y][x]);
-    potentialKill(x, y, (redsTurn ? 1 : -1), board[y][x].isKing, true);
+    potentialKill(x, y, (redsTurn ? 1 : -1), board[y][x].isKing, true, true);
     if(killStreakOn) {
       lastClickedX = x;
       lastClickedY = y;
@@ -204,22 +204,51 @@ function actHandler(x, y) {
 /*----------HEURISTIC FUNCTIONS----------*/
 ///////////////////////////////////////////
 
-function heuristics() {}  // WORK HERE !!!
-// Heuristic without graphic to reduce lag
+function heuristics() { // WORK HERE !!!
+  // Copy board
+  let arr = deepCopy(board);
+
+  for(let i = 0; i < board.length; i++) {
+    for(let j = 0; j < board[0].length; j++) {
+      if(board[i][j] == null && !board[i][j]) {
+        select(i, j);
+        // Exmaine kills, potential kills are not stored in EligbleMoves array
+        // Examine each of the four moves
+        for(let move of EligbleMoves) {
+          if(move[0] != -1) {
+
+          }
+        }
+      }
+    }
+  }
+}  
+// Heuristic without graphics to reduce lag
 
 function select(x, y) {
-  potentialKill(x, y, -1, board[y][x].isKing, false);
+  potentialKill(x, y, -1, board[y][x].isKing, false, true);
   // Find a way to fill EligbleMoves array
+  setResetHighLight(x, y, "Tan", true, -1, false);
   lastClickedX = x;
   lastClickedY = y;
+}
+
+function deepCopy(array) {
+  let arr = [];
+  for(let row of array) arr.push(row.slice());
+  return arr;
+}
+
+function simulateMove(x, y) {
+
 }
 
 ///////////////////////////////////////////
 /*------END HEURISTIC FUNCTIONS----------*/
 ///////////////////////////////////////////
 
-function setResetHighLight(x, y, color, IsGoingToRecordMove, dy) {
-  ctx.fillStyle = color;
+function setResetHighLight(x, y, color, IsGoingToRecordMove, dy, trueForColor) {
+  if(trueForColor) ctx.fillStyle = color;
   // Going Upwards
   let k = 0;
   for(let i = -1; i <= 1; i+=2) {
@@ -227,7 +256,7 @@ function setResetHighLight(x, y, color, IsGoingToRecordMove, dy) {
       for(let j = -1; j <= (board[y][x].isKing ? 1 : 0); j+=2)  {
         //console.log(`x:${x + i} y:${y + j * dy}`);
         if(0 <= y + j * dy && y + j * dy < 8 && board[y + j * dy][x + i] == null) {
-          ctx.fillRect((x + i) * sideLengthOfSquare, (y + j * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+          if(trueForColor) ctx.fillRect((x + i) * sideLengthOfSquare, (y + j * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
           EligbleMoves[k] = [IsGoingToRecordMove ? x + i : -1, IsGoingToRecordMove ? y + j * dy : -1];
         }
         k++;
@@ -236,8 +265,8 @@ function setResetHighLight(x, y, color, IsGoingToRecordMove, dy) {
   }
 }
 
-function potentialKill(x, y, dy, isKing, isCheckingForMultiKill) {
-  ctx.fillStyle = "#d38d8d";
+function potentialKill(x, y, dy, isKing, isCheckingForMultiKill, trueForColor) {
+  if(trueForColor) ctx.fillStyle = "#d38d8d";
   if(isCheckingForMultiKill) killStreakOn = false;
 
   for(let i = -2; i <= 2; i+=4) {
@@ -248,7 +277,7 @@ function potentialKill(x, y, dy, isKing, isCheckingForMultiKill) {
         && board[y + j/2 * dy][x + i/2].colorBoolean == (dy == -1) // Is that checker piece an enemy?
         && board[y + j * dy][x + i] == null) {                     // Is the spot behind the enemy checker empty?
       
-        ctx.fillRect((x + i) * sideLengthOfSquare, (y + j * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+        if(trueForColor) ctx.fillRect((x + i) * sideLengthOfSquare, (y + j * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
         potentialKillCoords.push(10 * (x + i) + (y + j * dy));
         potentialCasualty.push(board[y + j/2 * dy][x + i/2]);
         if(isCheckingForMultiKill) killStreakOn = true;
