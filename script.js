@@ -42,6 +42,7 @@ let simulatedArr = []
 let simulateLastClickedX = -1;
 let simulateLastClickedY = -1;
 let bestSimulatedMove    = [[], []]; // Move from to destination 
+let specifiedCasuality   = null;
 
 function initializeConfiguaration() {
   drawBoard();
@@ -158,13 +159,13 @@ function actHandler(x, y) {
       lastClickedY = y;
     }
   }
-
   // Move checker piece for Red&Black
   if(!killStreakOn 
     &&((EligbleMoves[0][0] == x && EligbleMoves[0][1] == y) 
     || (EligbleMoves[1][0] == x && EligbleMoves[1][1] == y)
     || (EligbleMoves[2][0] == x && EligbleMoves[2][1] == y)
     || (EligbleMoves[3][0] == x && EligbleMoves[3][1] == y))) {
+
     drawEmptyTile(lastClickedX, lastClickedY);
     setResetHighLight(lastClickedX, lastClickedY, "Tan", false, redsTurn ? 1 : -1, true, board);
 
@@ -183,7 +184,9 @@ function actHandler(x, y) {
       ctx.drawImage(crown, halfWaySideLengthOfSquare + x * sideLengthOfSquare - 15, halfWaySideLengthOfSquare + y * sideLengthOfSquare - 15, 30, 30);
       console.log("Draw crown");
     }
+
     if(!redsTurn) {
+      //if(board[0][7].i != 7) console.log("WRONG OCCURED");
       heuristics();
     }
     return;
@@ -216,6 +219,7 @@ function actHandler(x, y) {
       ctx.drawImage(crown, halfWaySideLengthOfSquare + x * sideLengthOfSquare - 15, halfWaySideLengthOfSquare + y * sideLengthOfSquare - 15, 30, 30);
       console.log("Draw crown");
     }
+    if(!redsTurn) { heuristics(); }
   }
 }
 
@@ -235,20 +239,21 @@ function heuristics() { // WORK HERE !!!
 
         select(j, i);
         // Exmaine kills, potential kills are not stored in EligbleMoves array
-        let simulatedPotentialKillCoords = potentialKillCoords.slice();
-
-        for(let kill of simulatedPotentialKillCoords) {
-
+        let simulatedPotentialKillCoords      = potentialKillCoords.slice();
+        let simulatedPotentialCasualityCoords = potentialCasualty.slice();
+        for(let k = 0; k < simulatedPotentialKillCoords.length; k++) {
+          let kill           = simulatedPotentialKillCoords[k];
+          specifiedCasuality = simulatedPotentialCasualityCoords[k];
           //console.log("SpineKill" + simulatedPotentialKillCoords);
           simulateKill(~~(kill / 10), kill % 10);
           points = countScore(simulatedArr);
-          console.log(simulatedArr);
-          console.log(points + ", " + minPointMove);
+          //console.log(simulatedArr);
+          //console.log(points + ", " + minPointMove);
           if(points < minPointMove) {
             minPointMove = points;
             bestSimulatedMove[0] = [i, j];
             bestSimulatedMove[1] = [kill % 10, ~~(kill / 10)];
-            console.log(bestSimulatedMove);
+            //console.log(bestSimulatedMove);
           }
           simulatedArr = deepCopy(board); // Reset board
         }
@@ -262,11 +267,13 @@ function heuristics() { // WORK HERE !!!
             simulateMove(move[0], move[1]);
             points = countScore(simulatedArr);
             if(points < minPointMove) {
-              //console.log(`${i}, ${j} -> ${move[1]}, ${move[0]}`);
+              //console.log(`${i}, ${j} -> ${move[1]}, ${move[0]}---`);
+              //console.log(EligbleMoves);
+              //console.log(move);
               minPointMove = points;
               bestSimulatedMove[0] = [i, j];
               bestSimulatedMove[1] = [move[1], move[0]];
-              console.log(bestSimulatedMove);
+              //console.log(bestSimulatedMove);
             }
             simulatedArr = deepCopy(board); // Reset board
           }
@@ -274,9 +281,11 @@ function heuristics() { // WORK HERE !!!
       }
     }
   }
-  //console.log(bestSimulatedMove);
-  setTimeout(actHandler, 1  , bestSimulatedMove[0][1], bestSimulatedMove[0][0]);
-  setTimeout(actHandler, 200, bestSimulatedMove[1][1], bestSimulatedMove[1][0]);
+  console.log(bestSimulatedMove);
+  EligbleMoves = [[-1, -1], [-1, -1], [-1, -1], [-1, -1]];
+  //if(board[0][7].i != 7) console.log("WRONG OCCURED");
+  setTimeout(actHandler, 0  , bestSimulatedMove[0][1], bestSimulatedMove[0][0]);
+  setTimeout(actHandler, 300, bestSimulatedMove[1][1], bestSimulatedMove[1][0]);
 }  
 // Heuristic without graphics to reduce lag
 
@@ -291,7 +300,13 @@ function select(x, y) {
 
 function deepCopy(array) {
   let arr = [];
-  for(let row of array) arr.push(row.slice());
+  for(let row of array) {
+    let r = [];
+    for(let i of row) {
+      r.push(i == null ? null: new Checker(i.i, i.j, i.colorBoolean, i.isKing, i.point));
+    }
+    arr.push(r);
+  }
   return arr;
 }
 
@@ -315,17 +330,18 @@ function simulateKill(x, y) {
   //console.log(potentialKillCoords);
   //console.log(x + ", " + y);
   //simulateCheckerElimination(potentialKillCoords.indexOf(10 * x + y));
-  //simulateCheckerElimination(x, y); IS REDUNDANT?
+  simulateCheckerElimination(x, y);
   potentialKillCoords = [];
+  potentialCasualty   = [];
 
   simulatedArr[y][x]   = simulatedArr[simulateLastClickedY][simulateLastClickedX];
   simulatedArr[y][x].i = x;
   simulatedArr[y][x].j = y;
   simulatedArr[simulateLastClickedY][simulateLastClickedX] = null;
-  console.log("-----------------------------");
-  console.log(simulatedArr[y][x]);
-  console.log(simulatedArr[simulateLastClickedY][simulateLastClickedX]);
-  console.log("-----------------------------");
+  //console.log("-----------------------------");
+  //console.log(simulatedArr[y][x]);
+  //console.log(simulatedArr[simulateLastClickedY][simulateLastClickedX]);
+  //console.log("-----------------------------");
   //simulateLastClickedX = -1;
   //simulateLastClickedY = -1;
 
@@ -339,17 +355,26 @@ function simulateKill(x, y) {
     simulatedArr[y][x].isKing = true;
     killStreakOn = false;
   }
-  if(killStreakOn) { // Exploring all multikill options
+  /*if(killStreakOn) { // Exploring all multikill options
     for(let a of potentialKillCoords) {
       simulateKill(~~(a / 10), a % 10);
     }
-  }
+  }*/
 
 }
 
 function simulateCheckerElimination(x, y) {
+  let recentlyEliminatedChecker = potentialCasualty[potentialKillCoords.indexOf((x * 10) + y)];
+  if(recentlyEliminatedChecker == undefined) {
+    console.log(x + ", " + y);
+    console.log(potentialKillCoords);
+    console.log(potentialCasualty);
+  }
+  //console.log("recentlyEliminatedChecker");
+  //console.log(recentlyEliminatedChecker);
+  simulatedArr[specifiedCasuality.j][specifiedCasuality.i] = null;
   //console.log(potentialKillCoords[index] % 10 + ", " + ~~(potentialKillCoords[index] / 10));
-  simulatedArr[y][x] = null;
+  //simulatedArr[y][x] = null;
   //simulatedArr[potentialKillCoords[index] % 10][~~(potentialKillCoords[index] / 10)] = null;
 }
 
@@ -365,6 +390,7 @@ function simulatePotentialKill(x, y, isKing, isCheckingForMultiKill, arr) {
         && arr[y - j][x + i] == null) {       // Is the spot behind the red checker empty?
       
         potentialKillCoords.push(10 * (x + i) + (y - j));
+        potentialCasualty.push(board[y - j/2][x + i/2]);
         if(isCheckingForMultiKill) killStreakOn = true;
       }
     }
@@ -426,6 +452,8 @@ function eliminateChecker(x, y, arr) {
   let indx = arr.indexOf((x * 10) + y);
   if(indx != -1) {
     let recentlyEliminatedChecker = potentialCasualty[indx];
+    console.log("recentlyEliminatedChecker");
+    console.log(recentlyEliminatedChecker);
     board[recentlyEliminatedChecker.j][recentlyEliminatedChecker.i] = null;
     resetPotentialKillMarkerAndCasualty(arr);
     drawEmptyTile(recentlyEliminatedChecker.i, recentlyEliminatedChecker.j);
