@@ -243,26 +243,11 @@ function heuristics() { // WORK HERE !!!
         // Exmaine kills, potential kills are not stored in EligbleMoves array
         let simulatedPotentialKillCoords      = potentialKillCoords.slice();
         let simulatedPotentialCasualityCoords = potentialCasualty.map(g => new Checker(g.i, g.j, g.isKing, g.colorBoolean, g.point));
-        /*for(let k = 0; k < simulatedPotentialKillCoords.length; k++) {
-          let kill           = simulatedPotentialKillCoords[k];
-          specifiedCasuality = simulatedPotentialCasualityCoords[k];
-          //console.log("SpineKill" + simulatedPotentialKillCoords);
-          simulateKill(~~(kill / 10), kill % 10);
-          points = countScore(simulatedArr);
-          //console.log(simulatedArr);
-          //console.log(points + ", " + minPointMove);
-          if(points < minPointMove) {
-            minPointMove = points;
-            bWin = 1;
-            bestSimulatedMove = [];
-            bestSimulatedMove.push([i, j]);
-            bestSimulatedMove.push([kill % 10, ~~(kill / 10)]);
-            //console.log(bestSimulatedMove);
-          }
-          simulatedArr = deepCopy(board); // Reset board
-        } */
+
         // compKill(x, y, sPKC, sPCy, sArr, multiKillArr, rSX, rSY);
         compKill(j, i, simulatedPotentialKillCoords, simulatedPotentialCasualityCoords, deepCopy(simulatedArr), [], j, i);
+
+
         // Examine each of the four moves
         //console.log(EligbleMoves);
         for(let move of EligbleMoves) {
@@ -272,7 +257,7 @@ function heuristics() { // WORK HERE !!!
             points = countScore(simulatedArr);
             if(points < minPointMove) {
               //console.log(`${i}, ${j} -> ${move[1]}, ${move[0]}---`);
-              //console.log(EligbleMoves);
+              console.log(EligbleMoves);
               //console.log(move);
               bWin = 2;
               minPointMove = points;
@@ -284,23 +269,23 @@ function heuristics() { // WORK HERE !!!
             simulatedArr = deepCopy(board); // Reset board
           }
         }
+        EligbleMoves = [[-1, -1], [-1, -1], [-1, -1], [-1, -1]];
       }
     }
   }
   console.log((bWin == 2 ? "Move" : (bWin == 1 ? "Kill" : "None. Error")));
   console.log(bestSimulatedMove);
-  EligbleMoves = [[-1, -1], [-1, -1], [-1, -1], [-1, -1]];
+  //EligbleMoves = [[-1, -1], [-1, -1], [-1, -1], [-1, -1]];
   //if(board[0][7].i != 7) console.log("WRONG OCCURED");
   for(let p = 0; p < bestSimulatedMove.length; p++) setTimeout(actHandler, p * 300, bestSimulatedMove[p][1], bestSimulatedMove[p][0]);
   bestSimulatedMove = [];
-  //setTimeout(actHandler, 0  , bestSimulatedMove[0][1], bestSimulatedMove[0][0]);
-  //setTimeout(actHandler, 300, bestSimulatedMove[1][1], bestSimulatedMove[1][0]);
 }  
 // Heuristic without graphics to reduce lag
 
 function select(x, y) {
   //console.log(arr[y][x]);
-  simulatePotentialKill(x, y, simulatedArr[y][x].isKing, false, simulatedArr);
+  potentialKill(x, y, -1, simulatedArr[y][x].isKing, false, false)
+  //simulatePotentialKill(x, y, simulatedArr[y][x].isKing, false, simulatedArr);
   // Find a way to fill EligbleMoves array
   setResetHighLight(x, y, "Tan", true, -1, false, simulatedArr);
   simulateLastClickedX = x;
@@ -333,77 +318,6 @@ function simulateMove(x, y) {
     console.log("Draw crown");
   }
   return;
-}
-
-function simulateKill(x, y) {
-  //console.log(potentialKillCoords);
-  //console.log(x + ", " + y);
-  //simulateCheckerElimination(potentialKillCoords.indexOf(10 * x + y));
-  simulateCheckerElimination(x, y);
-  potentialKillCoords = [];
-  potentialCasualty   = [];
-
-  simulatedArr[y][x]   = simulatedArr[simulateLastClickedY][simulateLastClickedX];
-  simulatedArr[y][x].i = x;
-  simulatedArr[y][x].j = y;
-  simulatedArr[simulateLastClickedY][simulateLastClickedX] = null;
-  //console.log("-----------------------------");
-  //console.log(simulatedArr[y][x]);
-  //console.log(simulatedArr[simulateLastClickedY][simulateLastClickedX]);
-  //console.log("-----------------------------");
-  //simulateLastClickedX = -1;
-  //simulateLastClickedY = -1;
-
-  simulatePotentialKill(x, y, simulatedArr[y][x].isKing, true, simulatedArr);
-  if(killStreakOn) {
-    simulateLastClickedX = x;
-    simulateLastClickedY = y;
-  }
-  //redsTurn = (killStreakOn ? redsTurn : !redsTurn);
-  if(!simulatedArr[y][x].isKing && (y == 0 || y == 7)) {
-    simulatedArr[y][x].isKing = true;
-    killStreakOn = false;
-  }
-  /*if(killStreakOn) { // Exploring all multikill options
-    for(let a of potentialKillCoords) {
-      simulateKill(~~(a / 10), a % 10);
-    }
-  }*/
-
-}
-
-function simulateCheckerElimination(x, y) {
-  let recentlyEliminatedChecker = potentialCasualty[potentialKillCoords.indexOf((x * 10) + y)];
-  if(recentlyEliminatedChecker == undefined) {
-    console.log(x + ", " + y);
-    console.log(potentialKillCoords);
-    console.log(potentialCasualty);
-  }
-  //console.log("recentlyEliminatedChecker");
-  //console.log(recentlyEliminatedChecker);
-  simulatedArr[specifiedCasuality.j][specifiedCasuality.i] = null;
-  //console.log(potentialKillCoords[index] % 10 + ", " + ~~(potentialKillCoords[index] / 10));
-  //simulatedArr[y][x] = null;
-  //simulatedArr[potentialKillCoords[index] % 10][~~(potentialKillCoords[index] / 10)] = null;
-}
-
-function simulatePotentialKill(x, y, isKing, isCheckingForMultiKill, arr) {
-  if(isCheckingForMultiKill) killStreakOn = false;
-
-  for(let i = -2; i <= 2; i+=4) {
-    for(let j = -2; j <= (isKing ? 2 : 0); j+=4) {
-      if(0 <= x + i && x + i < 8              // Is the x-cord within its bounds?
-        && 0 <= y - j && y - j < 8            // Is the y-cord within its bounds?
-        && arr[y - j/2][x + i/2] != null      // Is there a checker piece to the spot adjacent to you?
-        && arr[y - j/2][x + i/2].colorBoolean // Is that checker piece red?
-        && arr[y - j][x + i] == null) {       // Is the spot behind the red checker empty?
-      
-        potentialKillCoords.push(10 * (x + i) + (y - j));
-        potentialCasualty.push(board[y - j/2][x + i/2]);
-        if(isCheckingForMultiKill) killStreakOn = true;
-      }
-    }
-  }
 }
 
 function sPK(x, y, isKing, isCheckingForMultiKill, arr) {
@@ -493,26 +407,22 @@ function setResetHighLight(x, y, color, IsGoingToRecordMove, dy, trueForColor, a
   if(trueForColor) ctx.fillStyle = color;
   let k = 0;
   for(let i = -1; i <= 1; i+=2) {
-    if(0 <= x + i && x + i < 8) {
-      for(let j = -1; j <= (arr[y][x].isKing ? 1 : 0); j+=2)  {
-        //console.log(`x:${x + i} y:${y + j * dy}`);
-        if(0 <= y + j * dy && y + j * dy < 8 && arr[y + j * dy][x + i] == null) {
-          if(trueForColor) ctx.fillRect((x + i) * sideLengthOfSquare, (y + j * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
-          if(!redsTurn) console.log(`x:${x + i} y:${y + j * dy} --- ${x}, ${y}`);
-          EligbleMoves[k] = [IsGoingToRecordMove ? x + i : -1, IsGoingToRecordMove ? y + j * dy : -1];
-        } else EligbleMoves[k] = [IsGoingToRecordMove ? -1 : EligbleMoves[k][0], IsGoingToRecordMove ? -1 : EligbleMoves[k][1]];
-        k++;
+    for(let j = -1; j <= (arr[y][x].isKing ? 1 : 0); j+=2)  {
+      //console.log(`x:${x + i} y:${y + j * dy}`);
+      if(0 <= y + j * dy && y + j * dy < 8 
+        && 0 <= x + i && x + i < 8
+        && arr[y + j * dy][x + i] == null) {
+        if(trueForColor) ctx.fillRect((x + i) * sideLengthOfSquare, (y + j * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+        if(!redsTurn) console.log(`x:${x + i} y:${y + j * dy} --- ${x}, ${y}`);
+        EligbleMoves[k] = [IsGoingToRecordMove ? x + i : -1, IsGoingToRecordMove ? y + j * dy : -1];
       }
-    } else {
-      /*for(let l = 0; l < 4; l++) {
-        EligbleMoves[l] = [IsGoingToRecordMove ? -1 : EligbleMoves[l][0], IsGoingToRecordMove ? -1 : EligbleMoves[l][1]];
-      }*/
+      k++;
     }
   }
 }
 
 function potentialKill(x, y, dy, isKing, isCheckingForMultiKill, trueForColor) {
-  ctx.fillStyle = "#d38d8d";
+  if(trueForColor) ctx.fillStyle = "#d38d8d";
   if(isCheckingForMultiKill) killStreakOn = false;
 
   for(let i = -2; i <= 2; i+=4) {
@@ -523,7 +433,7 @@ function potentialKill(x, y, dy, isKing, isCheckingForMultiKill, trueForColor) {
         && board[y + j/2 * dy][x + i/2].colorBoolean == (dy == -1) // Is that checker piece an enemy?
         && board[y + j * dy][x + i] == null) {                     // Is the spot behind the enemy checker empty?
       
-        ctx.fillRect((x + i) * sideLengthOfSquare, (y + j * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+        if(trueForColor) ctx.fillRect((x + i) * sideLengthOfSquare, (y + j * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
         potentialKillCoords.push(10 * (x + i) + (y + j * dy));
         potentialCasualty.push(board[y + j/2 * dy][x + i/2]);
         if(isCheckingForMultiKill) killStreakOn = true;
