@@ -38,17 +38,19 @@ let blacks = [];
 
 /* AI info */
 let simulatedArr = []
+let minPointMove = 30;
 
 let simulateLastClickedX = -1;
 let simulateLastClickedY = -1;
-let bestSimulatedMove    = [[], []]; // Move from to destination 
+let bestSimulatedMove    = []; // Move from to destination 
 let specifiedCasuality   = null;
+let b = false;
 
 function initializeConfiguaration() {
   drawBoard();
   for(let i = 0; i < 3; i++) {
     for(let j = (1 + i) % 2; j < 8; j+=2) {
-      let checker = new Checker(j, i, false); // Black Checker
+      let checker = new Checker(j, i, false, false, 0); // Black Checker
       board[i][j] = checker;
       drawChecker(checker);
       //blacks.push(checker);
@@ -56,7 +58,7 @@ function initializeConfiguaration() {
   }
   for(let i = 5; i < 8; i++) {
     for(let j = (1 + i) % 2; j < 8; j+=2) {
-      let checker = new Checker(j, i, true); // Red Checker
+      let checker = new Checker(j, i, true, false, 0); // Red Checker
       board[i][j] = checker;
       drawChecker(checker);
       //reds.push(checker);
@@ -117,12 +119,12 @@ function selectedChecker(x, y) {
 }
 
 class Checker {
-  constructor(i, j, colorBoolean) {
+  constructor(i, j, colorBoolean, isKing, point) {
     this.i = i;
     this.j = j;
     this.colorBoolean = colorBoolean;
-    this.isKing = false;
-    this.point  = null;
+    this.isKing       = isKing;
+    this.point        = point;
   }
 }
 
@@ -211,7 +213,6 @@ function actHandler(x, y) {
     if(killStreakOn) {
       lastClickedX = x;
       lastClickedY = y;
-      bestSimulatedMove = [[], []];
     }
     redsTurn = (killStreakOn ? redsTurn : !redsTurn);
     if(!board[y][x].isKing && (y == 0 || y == 7)) {
@@ -230,18 +231,19 @@ function actHandler(x, y) {
 function heuristics() { // WORK HERE !!!
   // Copy board
   simulatedArr = deepCopy(board);
-  let minPointMove = 30;
+  minPointMove = 30;
   let points;
+  let bWin = 0;
+  let risingEdgeTrigger = false;
   
   for(let i = 0; i < board.length; i++) {
     for(let j = 0; j < board[0].length; j++) {
       if(board[i][j] != null && !board[i][j].colorBoolean) {
-
         select(j, i);
         // Exmaine kills, potential kills are not stored in EligbleMoves array
         let simulatedPotentialKillCoords      = potentialKillCoords.slice();
-        let simulatedPotentialCasualityCoords = potentialCasualty.slice();
-        for(let k = 0; k < simulatedPotentialKillCoords.length; k++) {
+        let simulatedPotentialCasualityCoords = potentialCasualty.map(g => new Checker(g.i, g.j, g.isKing, g.colorBoolean, g.point));
+        /*for(let k = 0; k < simulatedPotentialKillCoords.length; k++) {
           let kill           = simulatedPotentialKillCoords[k];
           specifiedCasuality = simulatedPotentialCasualityCoords[k];
           //console.log("SpineKill" + simulatedPotentialKillCoords);
@@ -251,17 +253,19 @@ function heuristics() { // WORK HERE !!!
           //console.log(points + ", " + minPointMove);
           if(points < minPointMove) {
             minPointMove = points;
-            bestSimulatedMove[0] = [i, j];
-            bestSimulatedMove[1] = [kill % 10, ~~(kill / 10)];
+            bWin = 1;
+            bestSimulatedMove = [];
+            bestSimulatedMove.push([i, j]);
+            bestSimulatedMove.push([kill % 10, ~~(kill / 10)]);
             //console.log(bestSimulatedMove);
           }
           simulatedArr = deepCopy(board); // Reset board
-        }
-
+        } */
+        // compKill(x, y, sPKC, sPCy, sArr, multiKillArr, rSX, rSY);
+        compKill(j, i, simulatedPotentialKillCoords, simulatedPotentialCasualityCoords, deepCopy(simulatedArr), [], j, i);
         // Examine each of the four moves
         //console.log(EligbleMoves);
         for(let move of EligbleMoves) {
-          
           if(move[0] != -1) {
             
             simulateMove(move[0], move[1]);
@@ -270,9 +274,11 @@ function heuristics() { // WORK HERE !!!
               //console.log(`${i}, ${j} -> ${move[1]}, ${move[0]}---`);
               //console.log(EligbleMoves);
               //console.log(move);
+              bWin = 2;
               minPointMove = points;
-              bestSimulatedMove[0] = [i, j];
-              bestSimulatedMove[1] = [move[1], move[0]];
+              bestSimulatedMove = [];
+              bestSimulatedMove.push([i, j]);
+              bestSimulatedMove.push([move[1], move[0]]);
               //console.log(bestSimulatedMove);
             }
             simulatedArr = deepCopy(board); // Reset board
@@ -281,11 +287,14 @@ function heuristics() { // WORK HERE !!!
       }
     }
   }
+  console.log((bWin == 2 ? "Move" : (bWin == 1 ? "Kill" : "None. Error")));
   console.log(bestSimulatedMove);
   EligbleMoves = [[-1, -1], [-1, -1], [-1, -1], [-1, -1]];
   //if(board[0][7].i != 7) console.log("WRONG OCCURED");
-  setTimeout(actHandler, 0  , bestSimulatedMove[0][1], bestSimulatedMove[0][0]);
-  setTimeout(actHandler, 300, bestSimulatedMove[1][1], bestSimulatedMove[1][0]);
+  for(let p = 0; p < bestSimulatedMove.length; p++) setTimeout(actHandler, p * 300, bestSimulatedMove[p][1], bestSimulatedMove[p][0]);
+  bestSimulatedMove = [];
+  //setTimeout(actHandler, 0  , bestSimulatedMove[0][1], bestSimulatedMove[0][0]);
+  //setTimeout(actHandler, 300, bestSimulatedMove[1][1], bestSimulatedMove[1][0]);
 }  
 // Heuristic without graphics to reduce lag
 
@@ -303,7 +312,7 @@ function deepCopy(array) {
   for(let row of array) {
     let r = [];
     for(let i of row) {
-      r.push(i == null ? null: new Checker(i.i, i.j, i.colorBoolean, i.isKing, i.point));
+      r.push(i == null ? null : new Checker(i.i, i.j, i.colorBoolean, i.isKing, i.point));
     }
     arr.push(r);
   }
@@ -397,13 +406,91 @@ function simulatePotentialKill(x, y, isKing, isCheckingForMultiKill, arr) {
   }
 }
 
+function sPK(x, y, isKing, isCheckingForMultiKill, arr) {
+  let pKC  = [];
+  let pC   = [];
+  let kSOn = false;
+
+  if(isCheckingForMultiKill) kSOn = false;
+
+  for(let i = -2; i <= 2; i+=4) {
+    for(let j = -2; j <= (isKing ? 2 : 0); j+=4) {
+      if(0 <= x + i && x + i < 8              // Is the x-cord within its bounds?
+        && 0 <= y - j && y - j < 8            // Is the y-cord within its bounds?
+        && arr[y - j/2][x + i/2] != null      // Is there a checker piece to the spot adjacent to you?
+        && arr[y - j/2][x + i/2].colorBoolean // Is that checker piece red?
+        && arr[y - j][x + i] == null) {       // Is the spot behind the red checker empty?
+      
+        pKC.push(10 * (x + i) + (y - j));
+        pC.push(board[y - j/2][x + i/2]);
+        if(isCheckingForMultiKill) kSOn = true;
+      }
+    }
+  }
+
+  return [pKC, pC, kSOn];
+}
+
+function compKill(x, y, sPKC, sPCy, sArr, multiKillArr, rSX, rSY) {
+  // sPKC : simulatedPotentialKillCoords
+  // sPCy : simulatedPotentialCasuality
+  // sArr : simulatedArr
+  // rSX  : realStepX, checker's starting position
+  // rSY  : realStepY, checker's starting position
+
+  // DCsArr : DeepCopy_sArr
+  let DCsArr = deepCopy(sArr);
+
+  for(let k = 0; k < sPKC.length; k++) {
+    let kill      = sPKC[k];
+    let kx        = ~~(kill / 10);
+    let ky        = kill % 10;
+    let killedTag = sPCy[k];
+    
+    // simulateCheckerElimination(x, y);
+    sArr[killedTag.j][killedTag.i] = null; // Removes the enemy checker piece
+
+    // simulatekill();
+    sArr[ky][kx]   = sArr[y][x];
+    sArr[ky][kx].i = kx;
+    sArr[ky][kx].j = ky;
+    sArr[y][x]     = null;
+
+    // sPK(x, y, isKing, isCheckingForMultiKill, arr);
+    let killData = sPK(kx, ky, sArr[ky][kx].isKing, true, sArr);
+
+    if(!sArr[ky][kx].isKing && ky % 7 == 0) { // if, New king is crowned
+      sArr[ky][kx].isKing = true;
+      killData[2]         = false;
+    }
+
+    if(killData[2]) { // if, isKillStreakOn
+      multiKillArr.push([ky, kx]);
+      compKill(kx, ky, killData[0], killData[1], deepCopy(sArr), multiKillArr.slice(), rSX, rSY);
+    } else {
+      points = countScore(sArr);
+      if(points < minPointMove) { // Calculate points
+        minPointMove = points;
+        // How will bestSimulatedMove store multi jump ? : TODO
+        bestSimulatedMove.splice(1);
+        bestSimulatedMove[0] = [rSY, rSX];
+        bestSimulatedMove.push(...multiKillArr);
+        bestSimulatedMove.push([ky, kx]);
+        //bestSimulatedMove[0] = [i, j];
+        //bestSimulatedMove[1] = [kill % 10, ~~(kill / 10)];
+        //console.log(bestSimulatedMove);
+      }
+    }
+    sArr = deepCopy(DCsArr);
+  }
+}
+
 ///////////////////////////////////////////
 /*------END HEURISTIC FUNCTIONS----------*/
 ///////////////////////////////////////////
 
 function setResetHighLight(x, y, color, IsGoingToRecordMove, dy, trueForColor, arr) {
   if(trueForColor) ctx.fillStyle = color;
-  // Going Upwards
   let k = 0;
   for(let i = -1; i <= 1; i+=2) {
     if(0 <= x + i && x + i < 8) {
@@ -411,10 +498,15 @@ function setResetHighLight(x, y, color, IsGoingToRecordMove, dy, trueForColor, a
         //console.log(`x:${x + i} y:${y + j * dy}`);
         if(0 <= y + j * dy && y + j * dy < 8 && arr[y + j * dy][x + i] == null) {
           if(trueForColor) ctx.fillRect((x + i) * sideLengthOfSquare, (y + j * dy) * sideLengthOfSquare, sideLengthOfSquare, sideLengthOfSquare);
+          if(!redsTurn) console.log(`x:${x + i} y:${y + j * dy} --- ${x}, ${y}`);
           EligbleMoves[k] = [IsGoingToRecordMove ? x + i : -1, IsGoingToRecordMove ? y + j * dy : -1];
-        }
+        } else EligbleMoves[k] = [IsGoingToRecordMove ? -1 : EligbleMoves[k][0], IsGoingToRecordMove ? -1 : EligbleMoves[k][1]];
         k++;
       }
+    } else {
+      /*for(let l = 0; l < 4; l++) {
+        EligbleMoves[l] = [IsGoingToRecordMove ? -1 : EligbleMoves[l][0], IsGoingToRecordMove ? -1 : EligbleMoves[l][1]];
+      }*/
     }
   }
 }
